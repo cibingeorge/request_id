@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'securerandom'
 
@@ -12,7 +14,16 @@ describe Sidekiq::Middleware::Client::RequestId do
         it 'adds the request id to the item' do
           request_id = Thread.current[:request_id] = SecureRandom.hex
           item = {}
-          expect { middleware.call(worker, item, nil) { } }.to change { item }.from({}).to('request_id' => request_id)
+          expect { middleware.call(worker, item, nil) {} }.to change { item }.from({}).to('request_id' => request_id)
+        end
+      end
+
+      context 'when there is a retry enqueued by sidekiq' do
+        it 'does not overwrite the existing request id with nil' do
+          Thread.current[:request_id] = nil
+          request_id = SecureRandom.hex
+          item = { 'request_id' => request_id }
+          expect { middleware.call(worker, item, nil) {} }.not_to change { item }
         end
       end
 

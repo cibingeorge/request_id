@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Sidekiq
   module Middleware
     module Client
@@ -6,20 +8,21 @@ module Sidekiq
           @options = options || default_options
         end
 
-        def call(worker, item, queue, redis_pool = nil)
+        def call(_worker, item, _queue, _redis_pool = nil)
           @options[:headers].each do |kv|
-            item[kv[:key].to_s] = kv[:value].call() if kv[:value]
+            unless kv[:value].nil? || item[kv[:key].to_s]
+              item[kv[:key].to_s] = kv[:value].call
+            end
           end
           yield
         end
 
-      private
+        private
 
         def default_options
-          { headers: [ { key: :request_id, value: lambda { ::RequestId.request_id } } ] }
+          { headers: [{ key: :request_id, value: -> { ::RequestId.request_id } }] }
         end
       end
     end
   end
 end
-
